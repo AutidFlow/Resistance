@@ -59,8 +59,6 @@ jobs:
         name: boot-jars
         path: |
           services/*/target/*.jar
-          etl/etl-runner/target/*.jar
-          api-gateway/target/*.jar
         if-no-files-found: error
         retention-days: 7
 
