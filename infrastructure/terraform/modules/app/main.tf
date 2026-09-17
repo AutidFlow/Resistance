@@ -6,8 +6,7 @@
 # Fargate because there is no instance to size or patch for two small
 # containers; the ALB because SNS will only deliver to a valid HTTPS
 # endpoint and because it is the natural place for the certificate and
-# the path split (the repo's hand-rolled api-gateway is a dev convenience,
-# not something to run in production).
+# the path split.
 
 data "aws_region" "current" {}
 

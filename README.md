@@ -37,45 +37,29 @@ query log (checkpointed, at-least-once). Details under
   same recruiter writing to two users produces two rows, one each
 - **UserAccount / LoginCode** - tracker users, auto-provisioned by email
   intake; passwordless login via hashed one-time codes
-- **Recruiter / RecruiterDetail / JobPosting / Note / Candidate** - the advanced
-  JPA mapping demos (1-1, 1-N, N-N) expressed in tracker terms
 
 ## Project layout
 
 ```
 Resistance/
 ├── services/
-│   ├── core-service/              Spring Core: DI, qualifiers, scopes, Java config (port 8081)
-│   ├── data-service/              JPA/Hibernate CRUD command-line demo (Contact)
-│   ├── security-service/          REST API + JDBC users/roles/bcrypt security (port 8084)
 │   ├── mvc-service/               The tracker: JSON API, OTP login, assistant, serves the React app (port 8085)
-│   ├── mvc-security-service/      MVC form login, roles, custom tables (port 8086)
-│   ├── advanced-data-service/     JPA advanced mappings CLI demo (1-1, 1-N, N-N)
 │   └── intake-service/            Email intake: webhook / AWS SES+SNS / IMAP (port 8087)
 │
 ├── shared/
-│   ├── shared-models/             JPA entities and DTOs
-│   ├── shared-validation/         Custom Bean Validation constraints (@ReferralCode)
-│   ├── shared-exceptions/         Common exceptions and API error payloads
-│   └── shared-utils/              CSV/name helpers, field encryption, audit event client
+│   ├── shared-models/             JPA entities, DTOs, and the idempotent schema copy the services apply on AWS
+│   └── shared-utils/              CSV/name helpers, field encryption, audit event client (no dependencies)
 │
-├── etl/
-│   ├── etl-core/                  Extract/Transform/Load framework interfaces + pipeline
-│   ├── etl-data-processors/       CSV extractor, normalizers, entity mappers
-│   ├── etl-validators/            Record validation rules
-│   └── etl-runner/                Spring Boot app that orchestrates the pipelines
+├── frontend/                      React + TypeScript SPA (Vite), built into the mvc-service jar
 │
 ├── infrastructure/
-│   ├── docker-compose.yml         MySQL + services + gateway
+│   ├── docker-compose.yml         MySQL + the two services
 │   ├── docker/Dockerfile          Generic multi-stage image for any module (+ Dockerfile.runtime for CI)
-│   ├── kubernetes/                Namespace, MySQL, and application manifests
 │   ├── terraform/                 AWS by code: bootstrap (once), modules, dev + prod envs
 │   ├── aws/                       How email intake works on AWS (SES -> SNS -> app)
-│   └── config/db-init/            Database schemas and seed data
+│   └── config/db-init/            Database schema and seed data for local MySQL and CI
 │
-├── frontend/                      React + TypeScript SPA (login + dashboard, Vite)
-│
-└── api-gateway/                   Routes /{service}/** to the matching service (port 8080)
+└── docs/                          TECH-GUIDE, CODE-TOUR, the E2E runbook, plans
 ```
 
 ## Building
@@ -118,16 +102,20 @@ a `resistance_mysql-data` volume from before a schema change, reset it first
 docker compose -f infrastructure/docker-compose.yml down -v
 ```
 
-Then run any service, e.g.:
+The September 2026 cleanup that removed the course demos dropped their tables
+(`members`, `roles`, the recruiter and posting set), so a volume from before
+then needs this reset too.
+
+Then run a service, e.g.:
 
 ```bash
-mvn -pl services/security-service spring-boot:run
+mvn -pl services/mvc-service spring-boot:run
 ```
 
 `DB_HOST`/`DB_PORT` environment variables override the default
 `localhost:3306` in every service.
 
-Full stack (MySQL, four web services, gateway):
+Full stack (MySQL and the two services):
 
 ```bash
 docker compose -f infrastructure/docker-compose.yml up --build
@@ -137,8 +125,6 @@ The mvc-service image build now also installs Node and builds the React
 app, so it takes a few minutes longer the first time and needs outbound
 access to nodejs.org and registry.npmjs.org as well as Maven Central. The
 tracker is then at `http://localhost:8085`.
-
-The gateway then serves e.g. `http://localhost:8080/security/api/applications`.
 
 ## Email intake & passwordless login
 
@@ -393,9 +379,6 @@ What is actually in place today:
   `@Convert(converter = EncryptedStringConverter.class)`. Fields used as
   lookup keys (account/contact email) stay plaintext for now - encrypting
   them needs deterministic encryption or a hash column first.
-- **security-service / mvc-security-service**: standalone HTTP Basic and
-  form-login demos with JDBC users, roles and bcrypt.
-
 - **Supply chain**: Dependabot watches Maven and Actions versions; CodeQL
   scans the Java code on PRs and weekly. Enable branch protection on
   `main` (require the Build check) in the repo settings - that part can't
@@ -442,21 +425,11 @@ single-table modeling and rewriting the repository layer per service. The
 field-encryption converter is JPA-specific; its `FieldEncryptor` core in
 `shared-utils` is storage-agnostic and would carry over.
 
-## ETL
-
-`etl-runner` imports job applications from CSV through the
-extract → validate → transform → load pipeline defined in `etl-core`:
-
-```bash
-mvn -pl etl/etl-runner spring-boot:run
-```
-
-By default it processes the bundled `sample-data/applications.csv` in dry-run
-mode. Set `etl.dry-run=false` to write to the database and
-`etl.input-location=file:/path/to/file.csv` to point at your own data.
-
 ## Origin
 
-The domain model (applications, contacts, recruiters, postings) was
-originally seeded from a Spring Boot course codebase; it has since been
-fully rewritten and extended into the tracker documented above.
+The repository began as a Spring Boot course codebase. The tracker's domain
+model (applications, contacts, accounts) was rewritten from it, and the
+course's own modules - the dependency-injection and security demos, a JPA
+mappings walkthrough, a hand-rolled API gateway and a CSV ETL - were removed
+in September 2026 once nothing on the path to production used them. They
+are in the git history if you ever want to look at them.

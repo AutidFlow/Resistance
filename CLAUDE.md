@@ -10,7 +10,10 @@ application" email to your personal intake address (`track+<alias>@domain`)
 and the tracker parses it, files it under your auto-provisioned account,
 and follows the status over time. Login is passwordless (emailed one-time
 codes). The UI is a React app that mvc-service builds and serves; the
-original Thymeleaf pages have been retired.
+original Thymeleaf pages have been retired. The course's own modules were
+removed in September 2026: the build is mvc-service, intake-service,
+shared-models and shared-utils, and nothing off the path to production
+gets added back.
 
 **Read `docs/TECH-GUIDE.md` first** — a plain-language tour of every
 technology in the stack, kept current by convention (see below).
@@ -58,7 +61,7 @@ technology in the stack, kept current by convention (see below).
   SES→SNS (signature-verified), or IMAP; heuristic parsing with optional
   Claude fallback; the recipient **alias is the trust anchor**, never the
   From header.
-- `infrastructure/` — docker-compose, Kubernetes, `terraform/` (AWS by
+- `infrastructure/` — docker-compose, `terraform/` (AWS by
   code: `bootstrap/` once by hand, modules, `dev` + `prod` environments,
   cost gated on `app_enabled`; the Deploy workflow pushes images), and
   `config/db-init/` (the SQL schema source of truth; on AWS the services

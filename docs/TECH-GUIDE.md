@@ -32,9 +32,8 @@ mvc-service ───── the website: log in with a one-time code,
         see "Audit events out to AuditFlow" below
 ```
 
-Everything else in the repo supports that flow (shared code, deployment
-files, CI) or is a self-contained learning demo (core-service, the
-security demos, advanced-data-service, the ETL modules).
+Everything else in the repo supports that flow: shared code, deployment
+files, CI.
 
 ---
 
@@ -46,7 +45,7 @@ security demos, advanced-data-service, the ETL modules).
 `pom.xml` that lists many sub-projects ("modules") built together in
 dependency order.
 **Why:** the services share code (`shared/`), so they must build against
-the same versions in one command instead of 18 separate projects.
+the same versions in one command instead of four separate projects.
 **Where:** the root [`pom.xml`](../pom.xml) lists every module; each module's
 own `pom.xml` declares only what *it* needs. `mvn clean package` at the root
 builds everything.
@@ -415,12 +414,11 @@ sit on `OtpService`, the throttles, and the owner-scoped services;
 session. Entities never go on the wire — flat records (`ApplicationView`,
 `MeView`) do, so lazy-loading proxies and fields like the owner link
 can't leak by accident.
-**Why not security-service?** that module is the course's REST demo, kept
-as a reference. The real API lives where the security machinery already
-is. (`rest-api-service`, its unsecured twin, has been deleted: it was
-`security-service` minus its security config, and a module whose whole
-purpose was "the version without the safety on" is a liability, not a
-lesson.)
+**Why one API module?** The real API lives where the security machinery
+already is. The course's REST demos (`security-service` and, before it, an
+unsecured `rest-api-service`) duplicated these endpoints without the
+owner-scoping; a module whose purpose is "the version without the safety
+on" is a liability, not a lesson, and both are gone.
 **Validation and errors.** Request bodies are records annotated with
 Bean Validation constraints (`@NotBlank`, `@Size`, `@Email`); `@Valid` on the
 parameter makes Spring check them before the method runs. One class,
@@ -863,10 +861,8 @@ warning). Details in
 
 | Thing | What it is | Where |
 |---|---|---|
-| **Docker / docker-compose** | containers = apps packaged with their environment; compose starts a whole set (MySQL + services + gateway) with one command | `infrastructure/docker-compose.yml`, generic image recipe in `infrastructure/docker/Dockerfile` |
-| **Kubernetes manifests** | YAML describing how a cluster should run the same containers (replicas, ports, env) | `infrastructure/kubernetes/` |
+| **Docker / docker-compose** | containers = apps packaged with their environment; compose starts a whole set (MySQL + the two services) with one command | `infrastructure/docker-compose.yml`, generic image recipe in `infrastructure/docker/Dockerfile` |
 | **DB init scripts** | plain SQL that creates schemas and seed rows; both local MySQL and CI mount them | `infrastructure/config/db-init/` |
-| **API gateway** | one front door on port 8080 that forwards `/security/**`, `/intake/**` etc. to the right service — a hand-rolled ~80-line proxy, deliberately not a framework | `api-gateway/` |
 | **GitHub Actions CI** | on every push, GitHub spins up a runner, starts MySQL with our real init scripts, runs `mvn verify` (compile + all tests, including full Spring context startup, with the React app bundled into the mvc-service jar), and uploads the built jars; a second, faster job type-checks, tests, and builds the React app on its own | `.github/workflows/build.yml` |
 | **CodeQL** | GitHub's static security analysis - scans the Java code for vulnerability patterns on every PR and weekly | `.github/workflows/codeql.yml` |
 | **Terraform workflow** | on a pull request: format, validate, a security scan and a plan for both environments; on a push to `main`: applies `dev`; `prod` applies only from a manual run | `.github/workflows/terraform.yml` |

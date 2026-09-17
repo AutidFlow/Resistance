@@ -112,8 +112,7 @@ The platform's compose starts `ingestion`, `enrichment`, `alerting` and
 
 ## 1. Environment (local, one machine)
 
-Port plan — start **only** what's listed (Resistance's api-gateway/core
-would collide with AuditFlow's 8080/8081):
+Port plan — start **only** what's listed:
 
 | Component | Port | How to start |
 |---|---|---|
